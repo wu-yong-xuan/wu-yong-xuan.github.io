@@ -8,7 +8,7 @@
 
 # Basic Site Settings
 locale                   : "en-US"
-site_theme               : "default"
+site_theme               : "custom"
 title                    : "About"
 title_separator          : "-"
 name                     : &name "William Wu"
@@ -24,7 +24,7 @@ author:
   # Biographic information
   avatar           : "profile.png"
   name             : "William Wu"
-  pronouns         : # "he.him"   
+  pronouns         : #"he/him"   
   bio              : "Astrophysicist"
   location         : "Berkeley, CA"
   employer         : "UC Berkeley"
@@ -62,7 +62,7 @@ author:
   keybase          : # Username
   instagram        : # Username
   lastfm           : # Username
-  linkedin         : # Username
+  linkedin         : wuyongxuan
   mastodon         : # URL
   medium           : # URL
   pinterest        : # Username

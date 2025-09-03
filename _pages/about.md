@@ -8,13 +8,14 @@ redirect_from:
 ---
 
 I'm William Wu. Thanks for visiting my website! 
-I'm a current undergraduate senior at UC Berkeley completing my bachelors in astrophysics and computer science. I'm also pursuing a certificate in new media with the Berkeley Center for New Media. My interests lie in the intersection of astronomy, music, art, storytelling, and technology. I love exploring the digital medium and the ripples new technologies have left on our culture and society. Specifically, I'm interested in how the emergence of new technologies (such as the synthesizer) has shaped narrative development over time. 
 
-On the more physics side of things, I've been fascinated with anything that involves light. This curiosity with photons has led me to my current research interests: time domain astronomy and high energy astrophysics. My current research involves studying the photometric and spectroscopic data from wide field surveys and targeted multi-wavelength observations to study the physics of high energy transients such as the tidal disruption of a star by a black hole.
+I'm a current undergraduate senior at UC Berkeley completing my bachelors in astrophysics and computer science. I'm also pursuing a certificate in new media with the Berkeley Center for New Media. My interests lie in the intersection of astronomy, music, art, storytelling, and technology. I love exploring the digital medium and the ripples new technologies have left on our culture and society. Specifically, I'm interested in how the emergence of novel technologies (such as the synthesizer) has shaped narrative development over time. 
+
+On the more physics-y side of things, I've been fascinated with anything that involves light. This curiosity with photons has led me to my current research interests: time domain astronomy and high energy astrophysics. My current research involves studying photometric and spectroscopic data from wide field surveys and targeted multi-wavelength observations to understand the physics of high energy transients, such as the tidal disruption of a star by a black hole.
 
 I'm also interested in taking my astronomical research and simulations and bringing it to the public through art and animation. It's incredibly important to bridge the gap between science and society, and I believe stories can be an effective and beautiful way to do so. 
 
-In my free time I love to create! I've been learning digital art, music production, and 3D animation so I can bring my ideas to life. I've also been learning bass to satisfy the rock star part of me. I also spend a lot of time in astronomy and science outreach. I love studying space, but I love sharing my passions even more!
+In my free time I love to create! I've been learning digital art, music production, and 3D animation so I can bring my ideas to life. I've also been learning bass to satisfy the rock star part of me. I spend a lot of time in astronomy and science outreach. I love studying space, but I love sharing my passions even more!
 
 
 

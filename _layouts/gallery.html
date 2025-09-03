@@ -25,7 +25,10 @@ layout: compress
         {{ content }}
       </div>
     </div>
-
+    <div class="display-image">
+        <img>
+        <span>x</span>
+    </div>
     <div class="page__footer">
       <footer>
         {% include footer/custom.html %}
@@ -34,6 +37,29 @@ layout: compress
     </div>
 
     {% include scripts.html %}
+    <script>
+      let images=document.querySelectorAll("div.gallery img");
+      let viewImage= document.querySelector("div.display-image");
+      let fullImage = document.querySelector("div.display-image img");
+      for (let image of images) {
+        image.addEventListener("click", function(e) {
+          viewImage.style.display = 'flex';
+          fullImage.src = e.target.src;
+          fullImage.onload = () => {
+            viewImage.classList.add("active");
+          }
+        })
+      }
 
+      let x = document.querySelector("div.display-image span");
+      x.addEventListener("click", function(e) {
+          viewImage.classList.remove("active");
+          viewImage.addEventListener("transitionend", function handleTransitionEnd(e) {
+            // Remove event listener so it doesn't fire again
+            viewImage.removeEventListener("transitionend", handleTransitionEnd);
+            viewImage.style.display = "none";
+          })
+      })
+    </script>
   </body>
 </html>

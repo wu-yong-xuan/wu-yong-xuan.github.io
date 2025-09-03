@@ -2,21 +2,28 @@
 layout: gallery
 title: "Art"
 permalink: /art/
-author_profile: true
+author_profile: false
 ---
 
 {% include base_path %}
 
+{% assign has_gallery_images = false %} <!-- temporary until I make a collection for art -->
+
 {% for file in site.static_files %}
     {% if file.path contains '/images/gallery/' %}
+        {% assign has_gallery_images = true %}
         <div class="responsive">
             <div class="gallery">
-                <a target="_blank" href="{{ file.path | relative_url }}">
+                <!-- <a target="_blank" href="{{ file.path | relative_url }}"> -->
                 <img src="{{ file.path | relative_url }}" width="600" height="400">
-                </a>
+                <!-- </a> -->
             </div>
         </div>    
     {% endif %}
 {% endfor %}
-        
+
+{% unless has_gallery_images %}
+    <h2>No gallery images found. Stay tuned for my artistic endeavors. </h2>
+    
+{% endunless %}
 

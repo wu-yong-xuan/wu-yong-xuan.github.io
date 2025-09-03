@@ -1,0 +1,106 @@
+/* Reset some default styling */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Base styles */
+body {
+    font-family: 'Chathura', sans-serif;
+    background-color: #f9f9f9;
+    color: #333;
+    line-height: 1.6;
+    padding: 20px;
+}
+
+/* Header styles */
+header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+header h1 {
+    font-size: 48px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+/* Content wrapper */
+.content {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* Project title section */
+.proj-title {
+    margin-bottom: 40px;
+}
+
+.proj-part h2 {
+    text-align: center;
+    font-size: 36px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: #34495e;
+}
+
+/* Image gallery layout */
+.gallery {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+/* Individual image containers */
+.gallery-img {
+    flex: 1 1 45%;
+    max-width: 180px;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    background-color: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.gallery-img:hover {
+    transform: scale(1.02);
+}
+
+/* Images */
+.gallery-img img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Captions */
+.caption {
+    padding: 10px 15px;
+    width: 100%;
+    font-size: 20px;
+    text-align: center;
+    background-color: #ecf0f1;
+    color: #2c3e50;
+}
+@media (max-width: 600px) {
+    .gallery-img {
+        flex: 1 1 100%;
+    }
+
+    header h1 {
+        font-size: 36px;
+    }
+
+    .proj-part h2 {
+        font-size: 28px;
+    }
+
+    .caption {
+        font-size: 18px;
+    }
+}

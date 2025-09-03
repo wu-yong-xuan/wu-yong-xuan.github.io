@@ -9,6 +9,7 @@
 .sidebar {
   -webkit-transform: translate3d(0, 0 , 0);
           transform: translate3d(0, 0 , 0);
+  text-align: center;
 
   @include clearfix();
   margin-bottom: 1em;
@@ -50,7 +51,7 @@
   }
 
   p, li {
-    font-family: $sans-serif;
+    font-family: $garamond;
     font-size: $type-size-6;
     line-height: 1.5;
   }
@@ -88,7 +89,8 @@
   // height: 36px;
 
   @include breakpoint($large) {
-    display: block;
+    display: flex;
+    justify-content: center;
     width: auto;
     height: auto;
   }
@@ -128,7 +130,7 @@
   }
 }
 .sidebar .author__name {
-  font-family: $sans-serif;
+  font-family: $garamond;
   font-size: $type-size-5;
 }
 
@@ -161,7 +163,7 @@
   position: relative;
   display: table-cell;
   vertical-align: middle;
-  font-family: $sans-serif;
+  font-family: $garamond;
   z-index: 10;
   position: relative;
   cursor: pointer;

@@ -22,8 +22,8 @@ main:
   # - title: "Portfolio"
   #   url: /portfolio/
 
-  - title: "Outreach"
-    url: /outreach/
+  # - title: "Outreach"
+  #   url: /outreach/
 
 
   - title: "Code"
@@ -31,14 +31,18 @@ main:
         
   # - title: "Blog Posts"
   #   url: /year-archive/
-  # - title: "2D"
-  #   url: /art/
+
+  - title: "2D"
+    url: /art/
 
   # - title: "3D"
   #   url: /3d/
 
-  # - title: "Music"
-  #   url: /music/
+  - title: "Music"
+    url: /music/
+
+  # - title: "Sonification"
+  #   url: /sonification/
 
   - title: "CV"
     url: /cv/
