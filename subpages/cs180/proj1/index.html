@@ -1,0 +1,191 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CS 180 Project 1</title>
+    <link href="https://fonts.googleapis.com/css2?family=Chathura:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./style.css">
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <header>
+        <h1>CS180 Project 1</h1>
+        <h2>Images of the Russian Empire</h2>
+        <p>This project aims to colorize the Prokudin-Gorskii photo collection. In the early 1900s Prokudin-Gorskii took many colorized photos by recording three exposures on a glass plate using three filters (red, green, and blue). These plates were later digitized by the library of congress and this project aims to reconstruct the color image by separating the three exposures into color channels and then aligning them using various techniques.</p>
+    </header>
+
+    <div class="content">
+        <div class="proj-title">
+            <div class="proj-part">
+                <h2>Simple implementation</h2>
+                <p>The most basic implementation would be to divide the image into three equal parts and overlay the corresponding channels. However, in doing this, it becomes clear the images are not aligned.</p>
+            </div>
+            <div class="gallery">
+                <div class="gallery-img">
+                    <img src="./media/img/cathedral.jpg">
+                    <div class="caption">Cathedral glass plate image from library of congress</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/noshift.jpg">
+                    <div class="caption">Three channels separated and overlaid with no alignment</div>
+                </div>
+                
+            </div>
+            <div class="proj-part">
+                <h2>Alignment: Naive implementation</h2>
+                <p>
+                    So, how do we align these images? The simplest method would be to brute force check all x and y translations within a window (say -15 to +15 pixels) and see which resulting image is "best". To define "best", we have to choose an image matching metric. A simple criterion would be to choose the L2 norm or Euclidean distance and define "best" as the image which minimizes the distance between the channel being aligned and the alignment target. 
+                    The Euclidean distance is defined as follows: \[\text{dist}=\sqrt{\sum(image_1-image_2)^2}\]
+                    Where <code>image1</code> is a pixel of the first image and <code>image2</code> is a pixel of the second image. The square of the difference is summed for each corresponding pixel in the two images.
+                    In our implementation, we drop the square root because it does not affect which shift minimizes the distance.
+                    Another metric is the normalized cross correlation (NCC), which is defined as follows: 
+                    \[\text{NCC} = \frac{\sum(image_1-\mu_1)\cdot(image_2-\mu_2)}{\sqrt{\sum(image_1-\mu_1)^2\sum(image_2-\mu_2)^2}}\]
+                    The NCC is less sensitive to changes in illumination and contrast, so brightness offsets in the different channels don't affect the resulting score as much as it would for a Euclidean distance. 
+                    Moving forward, the alghorithms all use NCC because of this reason.
+                </p>
+            </div>
+
+            <div class="gallery">
+                <div class="gallery-img">
+                    <img src="./media/noshift.jpg">
+                    <div class="caption">Unaligned image</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/L2.jpg">
+                    <div class="caption">Aligned image using L2 norm</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/NCC.jpg">
+                    <div class="caption">Aligned image using NCC</div>
+                </div>
+                
+            </div>   
+            <div class="proj-part">
+                <h2>Alignment: Cropping</h2>
+                <p>
+                    Upon inspection, it's clear that some plates are still misaligned. This is because of behavior at the edges of the plates. Thus, to attain a much better alignment, we can simply crop out the edges that are skewing our results. 
+                    Moreover, we don't need the entire image to align the plates, so we can crop more aggressively and only consider a smaller portion of the image. In our implementation, we crop 25% off of each side, effectively using 25% of the original image area. 
+                    This results in a faster and much better alignment. We also crop the outer 5% of the final image to partly get rid of blank borders.
+                </p>
+            </div>
+            <div class="gallery">
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/cathedral_NCC.jpg">
+                    <div class="caption">Cathedral Single-Scale<br/>OffsetR = [12,3], OffsetG = [5,2]</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/monastery_NCC.jpg">
+                    <div class="caption">Monastery Single-Scale<br/>OffsetR = [3,2], OffsetG = [-3,2]</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/tobolsk_NCC.jpg">
+                    <div class="caption">Tobolsk Single-Scale<br/>OffsetR = [7,3], OffsetG = [3,3]</div>
+                </div>
+            </div> 
+            
+            <div class="proj-part">
+                <h2>Image Pyramids</h2>
+                <p>
+                    So cropping and exhaustively searching all alignment seems to work pretty well for the images so far. However, this method does not scale well and becomes incredibly expensive for large displacements (which is often the case for higher resolution images).
+                    Thus, to accomodate higher resolution images as well as generally create a more efficient alghorithm, we implemented an image pyramid. 
+                    An image pyrmaid consists of an image at many different levels of resolution. This allows us to align on the coursest resolution and then slowly step down levels and perform finer adjustments. 
+                    For our implementation we blur and subsample the plate being aligned and the plate being aligned to until either the height or width is below 32 pixels. We then align it over a 5 pixel window and use the displacement vector (the values have to be doubled to match the resolution of the previous level) as a prior to aligning the previous pyramid level. 
+                    We keep using the shift obtained from one level as a prior to aligning the previous level until we reach level 0 or the original image.
+                    This yielded significantly faster results that are as good as the exhaustive search.
+                </p>
+            </div>
+            <div class="gallery">
+                <div class="gallery-img" style="max-width: 60vw;">
+                    <img src="./media/pyramid.png" >
+                    <div class="caption">Image pyramid diagrom from wikipedia<br> https://en.wikipedia.org/wiki/Pyramid_(image_processing)#/media/File:Image_pyramid.svg</div>
+                </div>
+            </div> 
+
+             <div class="proj-part">
+                <h2>Results</h2>
+                <p>
+                    These are the results of the final alghorithm using the NCC as the metric, aggressive cropping for better alignment, and an image pyramid for efficieny.
+                    One may notice that our alignment for Emir did not quite work out. We believe this is because our distance metric is based on correlation of pixel values. Because the red, green and blue filters don't actually follow the same trends, it doesn't quite work out. Taking a look at the three separate channels before alignment, one can see that the red and blue channels seem to be almost the oppsite. Moreover, because we used NCC and are maximizing it, we are looking for a positive correlation rather than a negative one. It may have been preferable to maximize the magnitude instead.
+                </p>
+            </div>
+            <div class="gallery">
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/church_pyramid.jpg">
+                    <div class="caption">Church<br/>OffsetR = [58,-4], OffsetG = [25,4]</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/emir_pyramid.jpg">
+                    <div class="caption">Emir<br/>OffsetR = [0,-4], OffsetG = [48,24]</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/harvesters_pyramid.jpg">
+                    <div class="caption">Harvesters<br/>OffsetR = [123,14], OffsetG = [59,17]</div>
+                </div>
+                                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/icon_pyramid.jpg">
+                    <div class="caption">Icon<br/>OffsetR = [90,23], OffsetG = [41,18]</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/italil_pyramid.jpg">
+                    <div class="caption">Italil<br/>OffsetR = [76,36], OffsetG = [37,21]</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/lastochikino_pyramid.jpg">
+                    <div class="caption">Lastochikino<br/>OffsetR = [75,-8], OffsetG = [-3,-1]</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/lugano_pyramid.jpg">
+                    <div class="caption">Lugano<br/>OffsetR = [93,-29], OffsetG = [40,-15]</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/melons_pyramid.jpg">
+                    <div class="caption">Melons<br/>OffsetR = [179,12], OffsetG = [81,9]</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/self_portrait_pyramid.jpg">
+                    <div class="caption">Self Portrait<br/>OffsetR = [175,37], OffsetG = [78,29]</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/siren_pyramid.jpg">
+                    <div class="caption">Siren<br/>OffsetR = [96,-23], OffsetG = [49,-5]</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/three_generations_pyramid.jpg">
+                    <div class="caption">Three Generations<br/>OffsetR = [50,14], OffsetG = [110,12]</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/cathedral_pyramid.jpg">
+                    <div class="caption">Cathedral<br/>OffsetR = [12,3], OffsetG = [5,2]</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/monastery_pyramid.jpg">
+                    <div class="caption">Monastery<br/>OffsetR = [3,2], OffsetG = [-3,2]</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/tobolsk_pyramid.jpg">
+                    <div class="caption">Tobolsk<br/>OffsetR = [7,3], OffsetG = [3,3]</div>
+                </div>
+
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/castle_pyramid.jpg">
+                    <div class="caption">Castle<br/>OffsetR = [0,-58], OffsetG = [-10,-15]</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/sunset_pyramid.jpg">
+                    <div class="caption">Sunset<br/>OffsetR = [110,23], OffsetG = [30,17]</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/mosque_pyramid.jpg">
+                    <div class="caption">Mosque<br/>OffsetR = [124,62], OffsetG = [48,35]</div>
+                </div>
+            </div> 
+
+        </div>   
+
+
+
+    </div>
+
+</body>
+</html>
