@@ -1,0 +1,668 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CS 180 Project 2</title>
+    <link href="https://fonts.googleapis.com/css2?family=Chathura:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.3/styles/default.min.css">
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.3/highlight.min.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+</head>
+<body>
+    <header>
+        <h1>CS180 Project 2</h1>
+        <h2>Fun with Filters and Frequencies!</h2>
+        <p>
+            This project explores various image processing techniques to detect edges, sharpen images, and combine images in different ways. 
+            We sharpen images through emphasizing high frequencies, detect edges by convolving with finite difference kernels, combine low frequencies of one image with high frequencies of another to produce hybrid images, and blend images with the use of Gaussian and Laplacian stacks.
+        </p>
+    </header>
+
+    <div class="content">
+        <div class="proj-title">
+            <div class="proj-part">
+                <h2>Part 1.1: Convolutions From Scratch</h2>
+                <p>
+                    Convolutions are central to image processing, so we implemented one using numpy! Because we have a naive implementation that doesn't take advantage of the Fourier Transform, we have \(O(n^2)\) time complexity.
+                    We implemented zero padding with support for each mode ("full", "valid", and "same") <code>scipy.signal.convolve2d</code> supports. The scipy function also has different options for boundary handling, but defaults to a zero fill. 
+                    We only opted to implement the zero fill so our function has a little functionality. 
+                </p>
+                <pre>
+                    <code class="python" style="text-align: left;">
+def load_image_as_grey(path:str) -> np.ndarray:
+    """Read image from path and convert to greyscale then return numpy array of image data"""
+    im = skio.imread(path)
+    if im.shape[-1] == 4:
+        im = sk.color.rgba2rgb(im)
+    im = sk.color.rgb2gray(im)
+    im = sk.img_as_float(im)
+    return im
+
+def convolve(img: str, kernel:np.ndarray, shape:str='same') -> np.ndarray:
+"""
+Convolves an image with a specified kernel 
+Args:
+    img (str): path to image file
+    kernel (ndarray): 2D matrix representing convolution kernel 
+    shape (str): 'full', 'same', or 'valid'. Determines how to pad the image and the output dimensions
+"""
+img = load_image_as_grey(img)
+imgH = img.shape[0]
+imgW = img.shape[1]
+kH, kW = kernel.shape
+padH = (kH)//2
+padW = (kW)//2
+match(shape):
+    case 'same':
+        img_padded = np.pad(img,((padH,padH),(padW,padW)), mode='constant',constant_values=0)
+        outImg = np.zeros_like(img)
+    case 'full':
+        img_padded = np.pad(img,((kH,kH),(kW,kW)), mode='constant',constant_values=0)
+        outImg = np.zeros((imgH+kH, imgW+kW))
+    case 'valid':
+        img_padded = img
+        outImg = np.zeros((imgH-kH, imgW-kW))
+        imgH -= kH
+        imgW -= kW
+    case _:
+        #default to 'same'
+        img_padded = np.pad(img,((padH,padH),(padW,padW)), mode='constant',constant_values=0)
+        outImg = np.zeros_like(img)
+
+# Flip the kernel or else this is a cross-correlation
+kernel = np.flip(kernel,(0,1))
+for i in range(imgH):
+    for j in range(imgW):
+        region = img_padded[i:i + kH, j:j + kW]
+        outImg[i][j] =  np.sum(region * kernel)
+return outImg
+                    </code>
+                </pre>
+                <p>
+                    We ran our convolution alghorithm using a 9x9 box filter as well as the finite difference kernels which are defined below. 
+                    \[D_x=\begin{bmatrix}1 & 0 & -1\end{bmatrix}\]
+                    \[D_y=\begin{bmatrix}1 \\ 0 \\ -1\end{bmatrix}\]
+                </p>
+                <div class="gallery">
+                    <div class="gallery-img">
+                        <img src="./media/1.1_original.jpg">
+                        <div class="caption">Original image</div>
+                    </div>
+                    <div class="gallery-img">
+                        <img src="./media/1.1_box.jpg">
+                        <div class="caption">Convolved with a 9x9 box filter</div>
+                    </div>
+                    <div class="gallery-img">
+                        <img src="./media/1.1_dx.jpg">
+                        <div class="caption">Convolved with \(D_x\)</div>
+                    </div>
+                    <div class="gallery-img">
+                        <img src="./media/1.1_dy.jpg">
+                        <div class="caption">Convolved with \(D_y\)</div>
+                    </div>
+                </div>
+                <p>We then ran the same convolutions using <code>scipy.signal.convolve2d</code> and generated the following difference images between our output and scipy's output.</p>
+                <div class="gallery">
+                    <div class="gallery-img">
+                        <img src="./media/1.1_diffbox.jpg">
+                        <div class="caption">Difference after convolution with 9x9 box filter.<br>MSE = 5.8336224878156714e-33</div>
+                    </div>
+                    <div class="gallery-img">
+                        <img src="./media/1.1_diffdx.jpg">
+                        <div class="caption">Difference after convolution with \(D_x\).<br>MSE = 0.0</div>
+                    </div>
+                    <div class="gallery-img">
+                        <img src="./media/1.1_diffdy.jpg">
+                        <div class="caption">Difference after convolution with \(D_y\).<br>MSE = 0.0</div>
+                    </div>
+                </div>
+                <p>
+                    We see the output is the same for the finite difference operator and almost the same for the box filter, except for the exceptionally bright parts of the image. We believe the error is a result of floating point errors.
+                    Moreover, because our implementation does not take advantage of the Fourier Transform, our implementation is much slower than the scipy alternative. 
+                    For the box filter, our implementation took 50.9s while the scipy function took 1.7s. That's ~30 times slower! 
+                    Moving forward, we will be using <code>scipy.signal.convolve2d</code> with the mode set to "same".
+                </p>
+
+            </div>
+
+            <div class="proj-part">
+                <h2>Part 1.2: Finite Difference Operator</h2>
+                <p>
+                    Sometimes, we are interested in finding the edges in an image. A typical metric used to find edges is the gradient magnitude. 
+                    \[\text{Gradient Magnitude}=\sqrt{\frac{\partial^2}{\partial{x}^2}\text{Image}+\frac{\partial^2}{\partial{y}^2}\text{Image}}\]
+                    We can calculate the partial derivatives using our finite difference operators defined earlier. These essentially just calculate the numerical partial derivative because of the fact that images are discrete.
+                    Then, to create an edge detector, we must threshold the gradient magnitude to binarize the image. This threshold was determined qualitatively to balance noise and detection of real edges.
+                </p>
+            </div>
+
+            <div class="gallery">
+                <div class="gallery-img">
+                    <img src="./media/cameraman.png">
+                    <div class="caption">Original image</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/1.2_dx.jpg">
+                    <div class="caption">Finite difference in x</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/1.2_dy.jpg">
+                    <div class="caption">Fintie difference in y</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/1.2_grad_mag.jpg">
+                    <div class="caption">Gradient magnitude</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/1.2_edges.jpg">
+                    <div class="caption">Edge image. Threshold=0.35</div>
+                </div>
+            </div>   
+
+
+            <div class="proj-part">
+                <h2>1.3: Derivative of Gaussian (DoG) Filter</h2>
+                <p>
+                    The results from the difference operators are rather noisy. To make our edge detector more robust to this noise, we can blur the image before convolving it with the finite difference operators. 
+                    Thus, we convolve it with a Gaussian kernel made with the outer product of <code>cv2.getGaussianKernel</code> with a kernel size of <code>9</code> and a sigma of <code>1.5</code>. 
+                </p>
+                <div class="gallery">
+                    <div class="gallery-img" style="max-width: 300px;">
+                        <img src="./media/cameraman.png">
+                        <div class="caption">Original image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 300px;">
+                        <img src="./media/1.3_smooth.jpg">
+                        <div class="caption">Blurred image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 300px;">
+                        <img src="./media/1.3_dx.jpg">
+                        <div class="caption">Finite difference in x</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 300px;">
+                        <img src="./media/1.3_dy.jpg">
+                        <div class="caption">finite difference in y</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 300px;">
+                        <img src="./media/1.3_mag.jpg">
+                        <div class="caption">Gradient magnitude</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 300px;">
+                        <img src="./media/1.3_edges.jpg">
+                        <div class="caption">Edges. Threshold=0.15</div>
+                    </div>
+                </div> 
+                <p>
+                    We can see that the edges are much stronger and slightly smoother. 
+                    <br>
+                    Performing two convolutions on a large image can take time, but there's a way to make this calculation much cheaper.
+                    Because convolutions are commutative we can convolve the gaussian and finite difference kernels together first before applying it to the image. The difference and gaussian kernels are much smaller than the image so this is much more efficient. 
+                    This is known as the Derivative of Gaussian (DoG) filter.  
+                </p>
+                <div class="gallery">
+                    <div class="gallery-img" style="max-width: 300px;">
+                        <img src="./media/1.3_filterx.jpg">
+                        <div class="caption">DoG filter in x</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 300px;">
+                        <img src="./media/1.3_filtery.jpg">
+                        <div class="caption">DoG filter in y</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 300px;">
+                        <img src="./media/1.3_dogdx.jpg">
+                        <div class="caption">Finite difference in x</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 300px;">
+                        <img src="./media/1.3_dogdy.jpg">
+                        <div class="caption">Finite difference in y</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 300px;">
+                        <img src="./media/1.3_dogmag.jpg">
+                        <div class="caption">Gradient magnitude</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 300px;">
+                        <img src="./media/1.3_dogedges.jpg">
+                        <div class="caption">Edges threshold=0.15</div>
+                    </div>
+                </div>
+                <p>
+                    Comparing the results between blurred finite difference operators and the Derivative of Gaussian filters, we see the output is essentially identical except for some very slight differences.
+                </p> 
+                <div class="gallery">
+                    <div class="gallery-img" style="max-width: 300px;">
+                        <img src="./media/1.3_diff.jpg">
+                        <div class="caption">Difference image of gradient magnitudes<br>MSE=0.0008325068109545628</div>
+                    </div>
+                </div>  
+            </div>
+
+            
+            <div class="proj-part">
+                <h2>2.1: Image "Sharpening"</h2>
+                <p>
+                    High frequencies are what make images look sharp. Thus, we can make an image look sharper by increasing the weight of the high frequencies. 
+                    To do this, we first apply a low pass filter (ie. convolve the image with a Gaussian) and then subtract it from the original image. This leaves us with only the high frequencies that were filtered out.
+                    We can then multiply this high frequency image by some sharpening factor \(\alpha\) and add it back to the original image. 
+                    Combining this whole process into a single convolution results in what is known as the unsharp mask filter.
+                    \[\text{Unsharp mask filter}=(1+\alpha)e-\alpha g\]
+                    \[\text{Sharpened image}=f*((1+\alpha)e-\alpha g)\]
+                    Where \(\alpha\) is the sharpenign factor, \(f\) is the image, \(e\) is a unit impulse, and \(g\) is a gaussian kernel.
+                </p>
+            
+                <div class="gallery">
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/taj.jpg" >
+                        <div class="caption">Original image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/2.1_tajblur.jpg" >
+                        <div class="caption">Blurred image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/2.1_tajhigh.jpg" >
+                        <div class="caption">High frequencies</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/2.1_tajsharp.jpg" >
+                        <div class="caption">Sharpened image (\(\alpha=1\))</div>
+                    </div>
+                </div> 
+                <div class="gallery">
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/moon.jpg" >
+                        <div class="caption">Original image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/2.1_moonblur.jpg" >
+                        <div class="caption">Blurred image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/2.1_moonhigh.jpg" >
+                        <div class="caption">High frequencies</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/2.1_moonsharp.jpg" >
+                        <div class="caption">Sharpened image (\(\alpha=1\))</div>
+                    </div>
+                </div> 
+                <p>
+                    We can see that taj is definitely much sharper. For the moon photo, there are less high frequencies so it may not seem to have sharpened as much.
+                    We can fix this by adjusting the sharpening factor \(\alpha\).
+                </p>
+
+                <div class="gallery">
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/taj.jpg" >
+                        <div class="caption">Original image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/2.1_taj_a1.jpg" >
+                        <div class="caption">Sharpened (\(\alpha=1\))</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/2.1_taj_a5.jpg" >
+                        <div class="caption">Sharpened (\(\alpha=5\))</div>
+                    </div>
+                </div> 
+                <div class="gallery">
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/moon.jpg" >
+                        <div class="caption">Original image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/2.1_moon_a1.jpg" >
+                        <div class="caption">Sharpened (\(\alpha=1\))</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/2.1_moon_a5.jpg" >
+                        <div class="caption">Sharpened (\(\alpha=5\))</div>
+                    </div>
+                </div> 
+                <p>
+                    The craters are much more defined now at (\(\alpha=5\)), but the Taj Mahal looks a lot worse at (\(\alpha=5\)). Thus, it's important to choose the right \(\alpha\) for your image.
+                    Now, can we use this method to recover images? We attempted to do this by blurring and image and then applying the unsharp mask filter in an attempt to see if details could be recovered.
+                    Intuitively, this shouldn't work because the unsharp mask filter only amplifies existing high frequencies, so if we get rid of some high frequencies there is no those can be recovered.
+                </p>
+                <div class="gallery">
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/tree.jpg" >
+                        <div class="caption">Original image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/2.1_treeblur.jpg" >
+                        <div class="caption">Blurred image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/2.1_treesharp.jpg" >
+                        <div class="caption">Resharpened (\(\alpha=5\))</div>
+                    </div>
+                </div> 
+                <p>This does make the branches more defined, but all the high frequencies in the leaves are lost.</p>
+            </div>
+            
+
+
+
+             <div class="proj-part">
+                <h2>2.2: Hyrbrid Images</h2>
+                <p>
+                    We can create hybrid images by combining the low frequencies of one image with the high frequencies of another. This makes it so when low frequencies dominate (ie the viewer is far away) we see one image and when high frequencies dominate (ie viewer is close) we see another.
+                    We can do this quite easily by putting one image through a low pass filter (convolve with a Gaussian), the second through a high pass filter (image minus the image convolved with a gaussian), and average the pixels to produce a hybrid image.
+                </p>
+            </div>
+            <div class="gallery">
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/DerekPicture.jpg">
+                    <div class="caption">Derek (low pass)</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/nutmeg.jpg">
+                    <div class="caption">Nutmeg (high pass)</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/2.2_hybrid.jpg">
+                    <div class="caption">Hybrid image</div>
+                </div>
+            </div>
+            <div class="gallery">
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/exit.png">
+                    <div class="caption">Exit sign (low pass)</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/lamp.jpg">
+                    <div class="caption">Lamp (high pass)</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/2.2_light.jpg">
+                    <div class="caption">Hybrid image</div>
+                </div>
+            </div> 
+            <div class="gallery">
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/photoshoot.png">
+                    <div class="caption">Photography Decal Lab 1 (low pass)</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/photoshoot2.png">
+                    <div class="caption">Photography Decal Lab 2 (high pass)</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/2.2_photoshoot_hybrid.jpg">
+                    <div class="caption">Hybrid image</div>
+                </div>
+            </div> 
+            <div class="gallery">
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/2.2_photoshoot1_ft.jpg">
+                    <div class="caption">Lab 1 Fourier Transform</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/2.2_photoshoot2_ft.jpg">
+                    <div class="caption">Lab 2 Fourier Transform</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/2.2_photoshoot_ft.jpg">
+                    <div class="caption">Hybrid Fourier Transform</div>
+                </div>
+            </div> 
+            <div class="gallery">
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/2.2_photoshoot_high.jpg">
+                    <div class="caption">High frequencies</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/2.2_photoshoothigh_ft.jpg">
+                    <div class="caption">High freq Fourier Transform</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/2.2_photoshoot_low.jpg">
+                    <div class="caption">Low frequencies</div>
+                </div>
+                <div class="gallery-img" style="max-width: 300px;">
+                    <img src="./media/2.2_photoshootlow_ft.jpg">
+                    <div class="caption">Low freq Fourier Transform</div>
+                </div>
+            </div> 
+            <div class="proj-part">
+                <h2>Part 2.3: Gaussian and Laplacian Stacks</h2>
+                <p>
+                    In this part we are creating Gaussian and Laplacian Stacks. A Gaussian stack is a stack of images where each level has half the resolution of the previous level but at the same size. 
+                    We can do this by progressively applying bigger Gaussian kernels to each level to create the next. A Laplacian stack is created from subtracting the next level of the Gaussian stack with the current level.
+                    This essentially separates the frequencies of an image into multiple layers of the stack. The final layer of the Laplacian stack is also the final layer of the Gaussian stack as there is nothing subtract from it. 
+                </p>
+            </div>
+
+            <div class="gallery">
+                <div class="gallery-img">
+                    <img src="./media/2.3_apple_0.jpg">
+                    <div class="caption">Apple. Laplaceian stack level 0</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.3_apple_1.jpg">
+                    <div class="caption">Apple. Laplaceian stack level 1</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.3_apple_2.jpg">
+                    <div class="caption">Apple. Laplaceian stack level 2</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.3_apple_3.jpg">
+                    <div class="caption">Apple. Laplaceian stack level 3</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.3_apple_4.jpg">
+                    <div class="caption">Apple. Laplaceian stack level 4</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.3_apple_5.jpg">
+                    <div class="caption">Apple. Laplaceian stack level 5</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.3_apple.jpg">
+                    <div class="caption">reconstructed apple from laplacian stack</div>
+                </div>
+            </div>   
+
+                        <div class="gallery">
+                <div class="gallery-img">
+                    <img src="./media/2.3_orange_0.jpg">
+                    <div class="caption">orange. Laplaceian stack level 0</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.3_orange_1.jpg">
+                    <div class="caption">orange. Laplaceian stack level 1</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.3_orange_2.jpg">
+                    <div class="caption">orange. Laplaceian stack level 2</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.3_orange_3.jpg">
+                    <div class="caption">orange. Laplaceian stack level 3</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.3_orange_4.jpg">
+                    <div class="caption">orange. Laplaceian stack level 4</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.3_orange_5.jpg">
+                    <div class="caption">orange. Laplaceian stack level 5</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.3_orange.jpg">
+                    <div class="caption">reconstructed orange from laplacian stack</div>
+                </div>
+            </div>   
+            <div class="proj-part">
+                <h2>Part 2.4: Multiresolution Blending</h2>
+                <p>
+                    Now we can blend images by using the Laplacian stacks we just made. To do this, we create stacks for both images and a mask.
+                    We combine them by going through each layer of the stack and multiplying the layer of <code>image1</code> with the layer of the mask and then the layer of <code>image2</code> with 1 minus the layer of the stack.
+                    We then sum all the layers together to get our blended image.     
+                </p>
+            </div>
+
+            <div class="gallery">
+                <div class="gallery-img">
+                    <img src="./media/2.4_im2_0.jpg">
+                    <div class="caption"></div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_im1_0.jpg">
+                    <div class="caption"></div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_blend_0.jpg">
+                    <div class="caption"></div>
+                </div>
+            </div>   
+
+                        <div class="gallery">
+                <div class="gallery-img">
+                    <img src="./media/2.4_im2_1.jpg">
+                    <div class="caption"></div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_im1_1.jpg">
+                    <div class="caption"></div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_blend_1.jpg">
+                    <div class="caption"></div>
+                </div>
+            </div>   
+
+                        <div class="gallery">
+                <div class="gallery-img">
+                    <img src="./media/2.4_im2_2.jpg">
+                    <div class="caption"></div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_im1_2.jpg">
+                    <div class="caption"></div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_blend_2.jpg">
+                    <div class="caption"></div>
+                </div>
+            </div>   
+
+                        <div class="gallery">
+                <div class="gallery-img">
+                    <img src="./media/2.4_im2_3.jpg">
+                    <div class="caption"></div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_im1_3.jpg">
+                    <div class="caption"></div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_blend_3.jpg">
+                    <div class="caption"></div>
+                </div>
+            </div>   
+
+                        <div class="gallery">
+                <div class="gallery-img">
+                    <img src="./media/2.4_im2_4.jpg">
+                    <div class="caption"></div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_im1_4.jpg">
+                    <div class="caption"></div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_blend_4.jpg">
+                    <div class="caption"></div>
+                </div>
+            </div>   
+
+                        <div class="gallery">
+                <div class="gallery-img">
+                    <img src="./media/2.4_im2_5.jpg">
+                    <div class="caption"></div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_im1_5.jpg">
+                    <div class="caption"></div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_blend_5.jpg">
+                    <div class="caption"></div>
+                </div>
+            </div>   
+
+                        <div class="gallery">
+                <div class="gallery-img">
+                    <img src="./media/2.4_im2.jpg">
+                    <div class="caption"></div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_im1.jpg">
+                    <div class="caption"></div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_blend.jpg">
+                    <div class="caption"></div>
+                </div>
+            </div>   
+
+            <div class="gallery">
+                <div class="gallery-img">
+                    <img src="./media/orange.jpeg">
+                    <div class="caption">orange</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/apple.jpeg">
+                    <div class="caption">apple</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_oraple_mask.jpg">
+                    <div class="caption">mask</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_blend.jpg">
+                    <div class="caption">Oraple</div>
+                </div>
+
+
+                <div class="gallery-img">
+                    <img src="./media/2.4_bridge.jpg">
+                    <div class="caption">bridge</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_poc.jpg">
+                    <div class="caption">pillars of creation (from NASA website)</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_hmask.jpg">
+                    <div class="caption">mask</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_space.jpg">
+                    <div class="caption">blended</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_dino.jpg">
+                    <div class="caption">dino nugget</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_eye.jpg">
+                    <div class="caption">eye</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_irregular_mask.jpg">
+                    <div class="caption">2.4_irregular_mask</div>
+                </div>
+                <div class="gallery-img">
+                    <img src="./media/2.4_deyeno.jpg">
+                    <div class="caption">Deyeno</div>
+                </div>
+            </div>   
+        </div>   
+    </div>
+</body>
+</html>
