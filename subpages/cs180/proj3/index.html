@@ -1,0 +1,230 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CS 180 Project 3</title>
+    <link href="https://fonts.googleapis.com/css2?family=Chathura:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.3/styles/default.min.css">
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.3/highlight.min.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+</head>
+<body>
+    <header>
+        <h1>CS180 Project 3</h1>
+        <h2>Auto Stitching Photo Mosaics</h2>
+        <p>
+            This project explores image mosaicing using registering, projective warping, resampling and compositing.
+            We also explore homographies and how they are involved in warping images. 
+        </p>
+    </header>
+
+    <div class="content">
+        <div class="proj-title">
+            <div class="proj-part">
+                <h2>Part A.1: Shoot the Pictures</h2>
+                
+                <p>
+                    For the purpose of this project, we took a myriad of photos with a fixed center of projection and rotating camera. A few are shown below.
+                </p>
+                <div class="gallery">
+                    <div class="gallery-img">
+                        <img src="./media/Lwindow.jpg">
+                        <div class="caption">Left of window (lights on)</div>
+                    </div>
+                    <div class="gallery-img">
+                        <img src="./media/Rwindow.jpg">
+                        <div class="caption">Right of window (lights off)</div>
+                    </div>
+                </div>
+                
+                <div class="gallery">
+                    <div class="gallery-img">
+                        <img src="./media/Lun.jpg">
+                        <div class="caption">Lobby left</div>
+                    </div>
+                    <div class="gallery-img">
+                        <img src="./media/Mun.jpg">
+                        <div class="caption">Lobby middle</div>
+                    </div>
+                    <div class="gallery-img">
+                        <img src="./media/Run.jpg">
+                        <div class="caption">Lobby right</div>
+                    </div>
+                </div>
+
+                <div class="gallery">
+                    <div class="gallery-img">
+                        <img src="./media/Lout.jpg">
+                        <div class="caption">Outside left</div>
+                    </div>
+                    <div class="gallery-img">
+                        <img src="./media/Mout.jpg">
+                        <div class="caption">Outside middle</div>
+                    </div>
+                    <div class="gallery-img">
+                        <img src="./media/Rout.jpg">
+                        <div class="caption">Outside right</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="proj-part">
+                <h2>Part A.2: Recover Homographies</h2>
+                <p>
+                    Before we can warp images, we need to compute the homography matrix between two images. Thus, we wrote the function <code>computeH(im1_pts, im2_pts)</code> to determine the homography matrix from a set of corresponding points.
+                    To solve for H, which has 8 degrees of freedom, we can set up a system of linear equations based on the definition:
+                    \[p'=Hp\]
+                    \[\begin{bmatrix}wx'\\wy'\\w\end{bmatrix}=\begin{bmatrix}H_{00}&H_{01}&H_{02}\\H_{10}&H_{11}&H_{12}\\H_{20}&H_{21}&1\end{bmatrix}
+                    \begin{bmatrix}x\\y\\1\end{bmatrix}\]
+                    \[H_{00}x+H_{01}y+H_{02} = wx'\]
+                    Which we can rewrite as a system of equations as follows:
+                    \[H_{00}x+H_{01}y+H_{02} = wx'\]
+                    \[H_{10}x+H_{11}y+H_{12} = wy'\]
+                    \[H_{20}x+H_{21}y+1 = w\]
+                    Reorganizing terms...
+                    \[H_{00}x+H_{01}y+H_{02} = (H_{20}x+H_{21}y+1)x'\]
+                    \[H_{10}x+H_{11}y+H_{12} = (H_{20}x+H_{21}y+1)y'\]
+                    Moving terms...
+                    \[H_{00}x+H_{01}y+H_{02} - H_{20}xx'-H_{21}yx'-x'=0\]
+                    \[H_{10}x+H_{11}y+H_{12} - H_{20}xy'+H_{21}yy'+y'=0\]
+                    Thus, it's clear that for each pair of points (x,y) and (x',y') we introduce 2 equations
+                    \[\begin{bmatrix}x&y&1&0&0&0&-xx'&-yx'&-x'\\0&0&0&x&y&1&-xy'&-yy'&-y'\\ &&&&&\vdots \end{bmatrix}\begin{bmatrix}H_{00}\\H_{01}\\H_{02}\\H_{10}\\H_{11}\\H_{12}\\H_{20}\\H_{21}\\1\end{bmatrix}=\begin{bmatrix}0\\0\\\vdots\end{bmatrix}\]
+                    Having taken an introductory linear algebra course, one can tell you can find the least squares solution using singular value decomposition (consult your college linear algebra textbook for details).
+                    For this section, to get the corresponding points, we used <a href="https://cal-cs180.github.io/fa23/hw/proj3/tool.html">this online tool</a> to select the points manually.
+                    For the following example, the correspondences are shown below.
+                </p>
+            
+                <div class="gallery">
+                    <div class="gallery-img">
+                        <img src="./media/Lwindowc.jpg">
+                        <div class="caption">Left window correspondences</div>
+                    </div>
+                    <div class="gallery-img">
+                        <img src="./media/Rwindowc.jpg">
+                        <div class="caption">Right window correspondences</div>
+                    </div>
+                </div>   
+                <p>
+                    We recovered the following homography matrix for this example:
+                    \[H=\begin{bmatrix}1.475&-0.047&-1563\\0.351&1.285&-685\\0.0002&0.000006&1.0 \end{bmatrix}\]
+                </p>
+            </div>
+
+
+            <div class="proj-part">
+                <h2>A.3: Warp the images</h2>
+                <p>
+                    Now that we have the homography matrix, we can begin image warping. To do this, we first find the bounding box of the warped image. We do this by warping the corners of the original image using the homography matrix (<code>H @ corners</code>).
+                    Then iterating through the pixels of the output image, we inverse warp back to the original coordinates and sample a pixel from the original. 
+                    We implemented two different methods of sampling: nearest neighbor sampling and bilinear sampling. Nearest neight sampling just gets the value from the nearest pixel while bilinear sampling weights the surrounding pixels based on the sampling coordinate. 
+                    With these functions, we performed image rectification. We took an image and specified four points corresponding to a planar, rectangular face which we warp to be face on. 
+                </p>
+                <div class="gallery">
+                    <div class="gallery-img" style="max-width: 300px;">
+                        <img src="./media/CR.jpg">
+                        <div class="caption">Original image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 300px;">
+                        <img src="./media/res/CR_crop.jpg">
+                        <div class="caption">Rectified and cropped (biliinear sampling)</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 300px;">
+                        <img src="./media/res/CR.jpg">
+                        <div class="caption">Rectified (biliinear sampling)</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 300px;">
+                        <img src="./media/res/CRNN.jpg">
+                        <div class="caption">Rectified (nearest neighbor sampling)</div>
+                    </div>
+                                        <div class="gallery-img" style="max-width: 300px;">
+                        <img src="./media/tts.jpg">
+                        <div class="caption">Original image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 300px;">
+                        <img src="./media/res/TTS_crop.jpg">
+                        <div class="caption">Rectified and cropped (biliinear sampling)</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 300px;">
+                        <img src="./media/res/TTS.jpg">
+                        <div class="caption">Rectified (biliinear sampling)</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 300px;">
+                        <img src="./media/res/TTSNN.jpg">
+                        <div class="caption">Rectified (nearest neighbor sampling)</div>
+                    </div>
+                </div> 
+                <p>
+                    Bilinear sampling gives higher quality results, but is slower than nearest neighbor. 
+                </p>
+            </div>
+
+            
+            <div class="proj-part">
+                <h2>A.4: Blend the images into a mosaic</h2>
+                <p>
+                    Now that we can warp images, we can blend them into a mosaic. By warping all the corner points of all the images being stitched, we can calculate the bounding box of the final output. Then, by following the same procedure as part A.3, we can warp an image to be in the same perspective as the base image.
+                    Then, we can use the output bounding box coordinates to place the resulting image on top of the base image in the output bounding box. 
+                    However, simply placing the image on top looks terrible! Thus, we blended the images together using alpha blending. We creataed the alpha mask using <code>scipy.ndimage.distance_transform_edt</code> which is similar to MATLAB's <code>bwdist</code>. We then warped the alpha mask with the same H as we used for the image. Then we multiplied the warped alpha with the warped image when adding the warped image to the output.
+                </p>
+            
+                <div class="gallery">
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/Lwindow.jpg" >
+                        <div class="caption">Left image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/Rwindow.jpg" >
+                        <div class="caption">Right image (base)</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/res/window.jpg" >
+                        <div class="caption">Mosaic</div>
+                    </div>
+                </div> 
+                <div class="gallery">
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/Lun.jpg" >
+                        <div class="caption">Left image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/Mun.jpg" >
+                        <div class="caption">Middle image (base)</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/Run.jpg" >
+                        <div class="caption">Right Image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/res/Un.jpg" >
+                        <div class="caption">Mosaic</div>
+                    </div>
+
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/Lout.jpg" >
+                        <div class="caption">Left image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/Mout.jpg" >
+                        <div class="caption">Middle image (base)</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/Rout.jpg" >
+                        <div class="caption">Right Image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/res/Out.jpg" >
+                        <div class="caption">Mosaic</div>
+                    </div>
+                </div> 
+
+            </div>
+            
+
+              
+        </div>   
+    </div>
+</body>
+</html>
