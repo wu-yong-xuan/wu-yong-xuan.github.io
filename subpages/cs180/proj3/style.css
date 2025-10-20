@@ -58,6 +58,13 @@ header h1 {
     margin-bottom: 20px;
     color: #34495e;
 }
+.proj-part ol {
+
+    font-size: 32px;
+    font-weight: 300;
+    margin-bottom: 20px;
+    color: #34495e;
+}
 code {
     text-align: center;
     font-size: 18px;

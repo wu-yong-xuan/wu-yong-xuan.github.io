@@ -221,7 +221,154 @@
                 </div> 
 
             </div>
+
+            <div class="proj-part">
+                <h2>B.1: Harris Corner Detection</h2>
+                <p>
+                    It's a lot of work manually defining the correspondences! Moreover, there is a lot of error doing it by eye. 
+                    Thus, we decided to implement feature matching for auto stitching. To do this, we first detected corners in the image using the Harris corner alghorithm (<code>skimage.feature.corner_harris</code>) and extracted the Harris corner response image.
+                    This gives us many more points than are needed and to keep the computation feasible, we need to select a couple of these. 
+                    To that end, we used Adaptive Non-Maximal Suppression (ANMS) as described in <a href="https://cal-cs180.github.io/fa25/hw/proj3/Papers/MOPS.pdf">this</a> paper.
+                </p>
             
+                <div class="gallery">
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/harris.jpg" >
+                        <div class="caption">Harris Corners Without ANMS</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/anms.jpg" >
+                        <div class="caption">Harris Corners With ANMS</div>
+                    </div>
+                </div> 
+            </div>
+            
+             <div class="proj-part">
+                <h2>B.2: Feature Descriptor Extraction</h2>
+                <p>
+                    Ok now we have some significant points in the image. How do we use these to define correspondences?
+                    Well, to start we have to extract the features at each of these points. We expect out mosaic images to share features so we can find correspondences based on feature matching.
+                    So, to first find out features, we take a 40x40 window around each point if it is within bounds of the image.
+                    Then, we blur this region and sample 8x8 pixels in this region with a spacing of 5 pixels between samples. 
+                    Finally we normalize the vector to have a mean of 0 and standard deviation of 1.  
+                </p>
+            
+                <div class="gallery">
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/feature1.jpg" >
+                        <div class="caption">Extracted feature 1</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/feature2.jpg" >
+                        <div class="caption">Extracted feature 2</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/feature3.jpg" >
+                        <div class="caption">Extracted feature 3</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/feature4.jpg" >
+                        <div class="caption">Extracted feature 4</div>
+                    </div>
+                </div> 
+            </div>
+
+            <div class="proj-part">
+                <h2>B.3: Feature Matching</h2>
+                <p>
+                    Woo, we have the features! Now, we just need to match them between images to find out correspondences.
+                    To detect matches, followed section 5 of the paper linked above. 
+                    We first calculated the pairwise distances using the norm of the difference vector. 
+                    We then calculate the Lowe score of the match which is defined as the distance from the first nearest neighbor over the distance from the second nearest neighbor. By assuring that
+                    the feature much more closely matches 1-NN over 2-NN, we are much less likely to have a false positive.
+                    Values of the ratio that fall below the threshold are considered matches.  
+                </p>
+            
+                <div class="gallery">
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/out1.jpg" >
+                        <div class="caption">Matched features in first image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/out2.jpg" >
+                        <div class="caption">Matched features in second image</div>
+                    </div>
+                </div> 
+                <div class="gallery">
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/un1.jpg" >
+                        <div class="caption">Matched features in first image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/un2.jpg" >
+                        <div class="caption">Matched features in second image</div>
+                    </div>
+                </div> 
+                <div class="gallery">
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/fish1.jpg" >
+                        <div class="caption">Matched features in first image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/fish2.jpg" >
+                        <div class="caption">Matched features in second image</div>
+                    </div>
+                </div> 
+                <p>
+                    Interestingly, this did not work at all for the window images. This is likely because the window has translational symmetry so many of the signficiant features may look similar, so it's hard to distinguish which feature matches another if they are all too similar.
+                    This is clear when adjusting the threshold. There are 0 matches below a Lowe score of 0.8 and only when we get to 0.9-1.0 are matches found. But a Lowe score of 1.0 means the program cannot distinguish between the 1-NN and the 2-NN so the alghorithm struggles to properly match for photos with a lot of symmetry.
+                </p>
+            </div>
+            
+            <div class="proj-part">
+                <h2>B.4: RANSAC for Robust Homography</h2>
+                <p>
+                    Now that we have feature matches, we can calculate the homographies and create the mosaics!
+                    To do this we implemented Random Sample Consensus (RANSAC):
+                    <ol>
+                        <li>Choose four pairs of points of matched points at random</li>
+                        <li>Calculate homography using these points</li>
+                        <li>Count the number of points after transformation that are within a certain euclidean distance to their corresponding matched point</li>
+                        <li>Repeat steps 1-3 many times (we used 1000 iterations) to find the best group of inliers</li>
+                        <li>Take the iteration with the most points that satisfy the previous creterion and calculate the final homography</li>
+                    </ol>
+                </p>
+                <p>
+                    With the final homography, we can reuse our mosaic code and create the final mosaic!
+                </p>
+            
+                <div class="gallery">
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/manualOut.jpg" >
+                        <div class="caption">Manually Stitched Image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/RANSACout.jpg" >
+                        <div class="caption">Autostitched Image</div>
+                    </div>
+                </div> 
+                <div class="gallery">
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/manualUn.jpg" >
+                        <div class="caption">Manually Stitched Image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/RANSACun.jpg" >
+                        <div class="caption">Autostitched Image</div>
+                    </div>
+                </div> 
+
+                <div class="gallery">
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/manualfish.jpg" >
+                        <div class="caption">Manually Stitched Image</div>
+                    </div>
+                    <div class="gallery-img" style="max-width: 60vw;">
+                        <img src="./media/RANSACfish.jpg" >
+                        <div class="caption">Autostitched Image</div>
+                    </div>
+                </div> 
+            </div>
 
               
         </div>   
