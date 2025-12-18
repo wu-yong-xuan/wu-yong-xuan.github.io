@@ -1,0 +1,1402 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CS 180 Project 5</title>
+    <link href="https://fonts.googleapis.com/css2?family=Chathura:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.3/styles/default.min.css">
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.3/highlight.min.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+</head>
+<body>
+    <header>
+        <h1>CS180 Project 5</h1>
+        <h2>Fun with Diffusion Models!</h2>
+        <p>
+            This project explores and implements a diffusion model. 
+        </p>
+    </header>
+
+    <div class="content">
+        <div class="proj-title">
+            <div class="proj-part">
+                <h2>Part A.0: Setup</h2>
+                
+                <p>
+                    In Part A, we use the DeepFloyd IF 2 stage diffusion model.
+                    To use the model, we had to generate a prompt embedding (a 4096 dimensional vector in our case).
+                    Some of the text prompts we came up with are the following:
+                    </p>
+                    <ul>
+                        <li>Sand Planet Hatsune Miku</li>
+                        <li>end of the world as we know it</li>
+                        <li>steampunk machination</li>
+                    </ul>
+                    <p>
+                    Using the seed 100 and two settings for <code>num_inference_steps</code>, we generated the following images:
+                </p>
+                <h3><code>num_inference_steps=20</code></h3>
+                <div class="gallery">
+                    <div class="gallery-img">
+                        <img src="./media/0-20-1.png">
+                        <div class="caption">Sand Planet Hatsune Miku</div>
+                    </div>
+                    <div class="gallery-img">
+                        <img src="./media/0-20-2.png">
+                        <div class="caption">End of the world as we know it</div>
+                    </div>
+                    <div class="gallery-img">
+                        <img src="./media/0-20-3.png">
+                        <div class="caption">Steampunk machination</div>
+                    </div>
+                </div>
+                <h3><code>num_inference_steps=100</code></h3>
+                <div class="gallery">
+                    <div class="gallery-img">
+                        <img src="./media/0-100-1.png">
+                        <div class="caption">Sand Planet Hatsune Miku</div>
+                    </div>
+                    <div class="gallery-img">
+                        <img src="./media/0-100-2.png">
+                        <div class="caption">End of the world as we know it</div>
+                    </div>
+                    <div class="gallery-img">
+                        <img src="./media/0-100-3.png">
+                        <div class="caption">Steampunk machination</div>
+                    </div>
+                </div>
+            <div class="proj-part">
+                <h2>Part A.1: Sampling Loops</h2>
+                <h2>A.1.1 The Forward Process</h2>
+                <p>
+                    In this section, we implement the forward process, taking a clean image and obtaining a noisy one by sampling from a Gaussian with mean \(\sqrt{\bar\alpha_t}x_0\) and variance \((1 - \bar\alpha_t)\)
+                    \[x_t = \sqrt{\bar\alpha_t} x_0 + \sqrt{1 - \bar\alpha_t} \epsilon \quad \text{where}~ \epsilon \sim N(0, 1)\]
+                    where \(x_0\) is the clean image and \(x_t\) is the noisy one.
+                    To thest this, I use an image of the Campanile image, resized to 64x64 and applied the forward process using the provided alphas_cumprod from DeepFloyd
+                </p>
+                <div class="gallery">
+                    <!-- <img src="./media/p1arch.jpg" style="max-width: 70vw;"> -->
+                    <div class="gallery-img">
+                        <img src="./media/campanile.png">
+                        <div class="caption" style="width:10vw;">Clean</div>
+                    </div>
+                    <div class="gallery-img">
+                        <img src="./media/1.1-250.png">
+                        <div class="caption" style="width:10vw;">t=250</div>
+                    </div>
+                    <div class="gallery-img">
+                        <img src="./media/1.1-500.png">
+                        <div class="caption" style="width:10vw;">t=250</div>
+                    </div>
+                    <div class="gallery-img">
+                        <img src="./media/1.1-750.png">
+                        <div class="caption" style="width:10vw;">t=750</div>
+                    </div>
+                </div>   
+                <h2>A.1.2: Classical Denoising</h2>
+                <p>
+                    We then attempted to denoise the noisy campanile images using classical methods: Gaussian blur filtering with carying kernel sizes and standard deviations. The results are shown below.
+                </p>
+                <div class="gallery">
+                    <div class="gallery-img">
+                        <img src="./media/1.1-250.png">
+                        <div class="caption" style="width:10vw;">t=250</div>
+                    </div>
+                    <div class="gallery-img">
+                        <img src="./media/1.1-500.png">
+                        <div class="caption" style="width:10vw;">t=250</div>
+                    </div>
+                    <div class="gallery-img">
+                        <img src="./media/1.1-750.png">
+                        <div class="caption" style="width:10vw;">t=750</div>
+                    </div>
+                </div>   
+                <div class="gallery">
+                    <div class="gallery-img" style="width:10vw;">
+                        <img src="./media/1.2-t250_(7, 1.0).png">
+                        <div class="caption">k=7, \(\sigma\)=1.0</div>
+                    </div>
+                    <div class="gallery-img" style="width:10vw;">
+                        <img src="./media/1.2-t500_(9, 1.5).png">
+                        <div class="caption">k=9, \(\sigma\)=1.5</div>
+                    </div>
+                    <div class="gallery-img" style="width:10vw;">
+                        <img src="./media/1.2-t750_(9, 1.5).png">
+                        <div class="caption">k=9, \(\sigma\)=1.5</div>
+                    </div>
+                </div>
+                <h2>A.1.3: One-Step Denoising</h2>
+                <p>
+                    We then used the pretrained diffusion model to denoise. The Stage 1 UNet from DeepFloyd can predict the noise in the image given the noisy image, the timestep, and the text-conditioning embedding (in our case "a high quality photo"). Using the noise it predicts, we can estimate the clean image as follows:
+                    \[\hat{x}_0 = \frac{x_t - \sqrt{1 - \bar\alpha_{t}}\, {\epsilon}}{\sqrt{\bar\alpha_{t}}}\]
+                    We followed the followng procedure for the 3 noisy images from A.1.2 (t = [250, 500, 750]):
+                    <ol>
+                        <li>Use your forward function to add noise to your Campanile.</li>
+                        <li>Estimate the noise in the new noisy image, by passing it through stage_1.unet</li> 
+                        <li>the noise from the noisy image to obtain an estimate of the original image.</li>
+                    </ol>
+                </p>
+                <div class="gallery">
+                    <div class="gallery-img" style="width:10vw;">
+                        <img src="./media/campanile.png">
+                        <div class="caption">Original image</div>
+                    </div>
+                </div>
+                <div class="gallery">
+                    <div class="gallery-img" style="width:10vw;">
+                        <img src="./media/1.3-noise-250.png">
+                        <div class="caption">noisy campanile t=250</div>
+                    </div>
+                    <div class="gallery-img" style="width:10vw;">
+                        <img src="./media/1.3-noise-500.png">
+                        <div class="caption">noisy campanile t=500</div>
+                    </div>
+                    <div class="gallery-img" style="width:10vw;">
+                        <img src="./media/1.3-noise-750.png">
+                        <div class="caption">noisy campanile t=750</div>
+                    </div>
+                </div>
+                <div class="gallery">
+                    <div class="gallery-img" style="width:10vw;">
+                        <img src="./media/1.3-denoise-250.png">
+                        <div class="caption">one step denoised at t=250</div>
+                    </div>
+                    <div class="gallery-img" style="width:10vw;">
+                        <img src="./media/1.3-denoise-500.png">
+                        <div class="caption">one step denoised at t=500</div>
+                    </div>
+                    <div class="gallery-img" style="width:10vw;">
+                        <img src="./media/1.3-denoise-750.png">
+                        <div class="caption">one step denoised at t=750</div>
+                    </div>
+                </div>
+                <h2>A.1.4: Iterative Denoising</h2>
+                <p>
+                    One step denoising is certainly better than a Gaussian blur filter, but it struggles at high noise levels. Thus, we implemented iterative denoising to remedy this. Rather than denoising all in one step, we remove a little bit of noise at a time. 
+
+                    Starting at timestep 1000, we iteratively step until we reach timestep 0. Although stepping 1 timestep at a time would probably give best results, we do not have the computational time nor money, so we skip some steps. Starting at t=990, we step down 30 steps at a time until we reach 0. 
+                    
+                    To predict the slightly less noisy image at the next step, we followed the equation 
+                    \[x_{t'} = \frac{\sqrt{\bar\alpha_{t'}}\beta_t}{1 - \bar\alpha_t} x_0 + \frac{\sqrt{\alpha_t}(1 - \bar\alpha_{t'})}{1 - \bar\alpha_t} x_t + v_\sigma\]
+                    Where: 
+                    <ul>
+                    <li>\(x_t\) is your image at timestep </li>
+                    <li>\(x_{t'}\) is your noisy image at timestep \(t'\) where \(t' < t\) (less noisy)</li>
+                    <li>\(\bar\alpha_t\)is defined by alphas_cumprod, from the model.</li>
+                    <li>\(\alpha_t = \frac{\bar\alpha_t}{\bar\alpha_{t'}}\)</li>
+                    <li>\(\beta_t = 1 - \alpha_t\)</li>
+                    <li>\(x_0\) is our current estimate of the clean image using one-step denoising</li>
+                    </ul>
+               </p>
+               <div class="gallery">
+                    <div class="gallery-img" style="width:10vw;">
+                        <img src="./media/1.4-t690.png">
+                        <div class="caption">noisy campanile at t=690</div>
+                    </div>
+                    <div class="gallery-img" style="width:10vw;">
+                        <img src="./media/1.4-t540.png">
+                        <div class="caption">noisy campanile at t=540</div>
+                    </div>
+                    <div class="gallery-img" style="width:10vw;">
+                        <img src="./media/1.4-t390.png">
+                        <div class="caption">noisy campanile at t=390</div>
+                    </div>
+                    <div class="gallery-img" style="width:10vw;">
+                        <img src="./media/1.4-t240.png">
+                        <div class="caption">noisy campanile at t=240</div>
+                    </div>
+                    <div class="gallery-img" style="width:10vw;">
+                        <img src="./media/1.4-t90.png">
+                        <div class="caption">noisy campanile at t=90</div>
+                    </div>
+                    <div class="gallery-img" style="width:10vw;">
+                        <img src="./media/1.4-clean.png">
+                        <div class="caption">Iteratively denoised campanile</div>
+                    </div>
+                    <div class="gallery-img" style="width:10vw;">
+                        <img src="./media/1.4-cleanonestep.png">
+                        <div class="caption">one step denoised campanile</div>
+                    </div>
+                    <div class="gallery-img" style="width:10vw;">
+                        <img src="./media/1.4-blurfiltered.png">
+                        <div class="caption">gaussian blurred campanile</div>
+                    </div>
+                </div>
+                <h2>A.1.5: Diffusion Model Sampling</h2>
+                <p>
+                    Another thing we can try is starting with pure noise and <code>i_start=0</code> which is equivalent to starting from <code>t=990</code>. This will denoise noise and essentially hallucinate an image. Using the prompt "a high quality photo", the diffusion model created the following images:
+                </p>
+                <div class="gallery">
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.5-0-clean.png">
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.5-1-clean.png">
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.5-2-clean.png">
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.5-3-clean.png">
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.5-4-clean.png">
+                    </div>
+                </div>
+                <h2>A.1.6: Classifier-Free Guidance (CFG)</h2>
+                <p>
+                    The results are pretty cool, but to be honest, I can't make heads or tails of what some of the images are. To improve image quality, we can use something called Classifier-Free Guidance (CFG). In CFG, we compute both a conditional and an unconditional noise estimate. We denote these \(\epsilon_c\) and \(\epsilon_u\). Then, we let our new noise estimate be:
+                    \[\epsilon = \epsilon_u + \gamma (\epsilon_c - \epsilon_u)\]
+                    Where \(\gamma\) is a tunable parameter. Notice that for \(\gamma=0\), we get an unconditional noise estimate, and for \(\gamma=1\) we get the conditional noise estimate.
+                    When \(\gamma>1\) we get higher quality images mysteriously. To get the unconditional noise estimate, we used a null prompt embeddign to the model. Using the conditional prompt "a high quality photo" and \(\gamma=7\) we obtained the following results
+                </p>
+                <div class="gallery">
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.6-0.png">
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.6-1.png">
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.6-2.png">
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.6-3.png">
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.6-4.png">
+                    </div>
+                </div>
+                <h2>A.1.7.0 Image-to-image translation</h2>
+                <p>
+                    Now, let's do something fun, let's use the CFG to edit an image. We can add noise to an image and use the CFG to denoise the image. This causes to hallucinate to fill in the gaps. 
+                    Using the prompt "a high quality photo" and noise levels [1, 3, 5, 7, 10, 20] (corresponding to indices of our strided timesteps list, so larger number correspond to less noisy images) we generated the following images:
+                </p>
+                <div class="gallery">
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.0-1.png">
+                        <div class="caption">i_start = 1</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.0-3.png">
+                        <div class="caption">i_start = 3</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.0-5.png">
+                        <div class="caption">i_start = 5</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.0-7.png">
+                        <div class="caption">i_start = 7</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.0-10.png">
+                        <div class="caption">i_start = 10</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.0-20.png">
+                        <div class="caption">i_start = 20</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/campanile.png">
+                        <div class="caption">original image</div>
+                    </div>
+                </div>
+                <div class="gallery">
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.0-1-1.png">
+                        <div class="caption">i_start = 1</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.0-1-3.png">
+                        <div class="caption">i_start = 3</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.0-1-5.png">
+                        <div class="caption">i_start = 5</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.0-1-7.png">
+                        <div class="caption">i_start = 7</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.0-1-10.png">
+                        <div class="caption">i_start = 10</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.0-1-20.png">
+                        <div class="caption">i_start = 20</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.0-orig1.png">
+                        <div class="caption">original</div>
+                    </div>
+                </div>
+                <div class="gallery">
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.0-2-1.png">
+                        <div class="caption">i_start = 1</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.0-2-3.png">
+                        <div class="caption">i_start = 3</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.0-2-5.png">
+                        <div class="caption">i_start = 5</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.0-2-7.png">
+                        <div class="caption">i_start = 7</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.0-2-10.png">
+                        <div class="caption">i_start = 10</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.0-2-20.png">
+                        <div class="caption">i_start = 20</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.0-orig2.png">
+                        <div class="caption">original</div>
+                    </div>
+                </div>
+                <h2>A.1.7.1</h2>
+                <p>
+                    We then performed the same procedure expept this time with web images and doodles.
+                </p>
+                <div class="gallery">
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.1-web-1.png">
+                        <div class="caption">i_start = 1</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.1-web-3.png">
+                        <div class="caption">i_start = 3</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.1-web-5.png">
+                        <div class="caption">i_start = 5</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.1-web-7.png">
+                        <div class="caption">i_start = 7</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.1-web-10.png">
+                        <div class="caption">i_start = 10</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.1-web-20.png">
+                        <div class="caption">i_start = 20</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.1-orig.png">
+                        <div class="caption">original</div>
+                    </div>
+                </div>
+                <br><br><br>
+                <div class="gallery">
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.1-draw1-1.png">
+                        <div class="caption">i_start = 1</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.1-draw1-3.png">
+                        <div class="caption">i_start = 3</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.1-draw1-5.png">
+                        <div class="caption">i_start = 5</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.1-draw1-7.png">
+                        <div class="caption">i_start = 7</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.1-draw1-10.png">
+                        <div class="caption">i_start = 10</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.1-draw1-20.png">
+                        <div class="caption">i_start = 20</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.1-draw1.png">
+                        <div class="caption">original</div>
+                    </div>
+                </div>
+                <br><br><br>
+                <div class="gallery">
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.1-draw2-1.png">
+                        <div class="caption">i_start = 1</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.1-draw2-3.png">
+                        <div class="caption">i_start = 3</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.1-draw2-5.png">
+                        <div class="caption">i_start = 5</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.1-draw2-7.png">
+                        <div class="caption">i_start = 7</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.1-draw2-10.png">
+                        <div class="caption">i_start = 10</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.1-draw2-20.png">
+                        <div class="caption">i_start = 20</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.1-draw2.png">
+                        <div class="caption">original</div>
+                    </div>
+                </div>
+
+                <h2>A.1.7.2</h2>
+                <p>
+                    We can use the same procedure to implement inpainting. Given an image , and a binary mask, we can create a new image that has the same content where the mask is 0, but new content wherever it is 1.
+                    To do this, we can run the diffusion denoising loop. But at every step, after obtaining the prediction, we force the prediction to have the same pixels as the original image where the mask is 0.
+                    Essentially, we leave everything inside the edit mask alone, but we replace everything outside the edit mask with our original image -- with the correct amount of noise added for timestep.
+                    Using this procedure, and the same prompt as earlier, we obtained the following:
+                </p>
+                <div class="gallery">
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/campanile.png">
+                        <div class="caption">original image</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/Mask.png">
+                        <div class="caption">Mask</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/To Replace.png">
+                        <div class="caption">To replace</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.2-0.png">
+                        <div class="caption">inpainted</div>
+                    </div>
+                    
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.2-1-im.png">
+                        <div class="caption">original image</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.2-1-mask.png">
+                        <div class="caption">Mask</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.2-1-repl.png">
+                        <div class="caption">To replace</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.2-1.png">
+                        <div class="caption">inpainted</div>
+                    </div>
+
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.2-2-im.png">
+                        <div class="caption">original image</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.2-2-mask.png">
+                        <div class="caption">Mask</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.2-2-repl.png">
+                        <div class="caption">To replace</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.2-2.png">
+                        <div class="caption">inpainted</div>
+                    </div>
+                </div>
+                <h2>A.1.7.3: Text-Conditional Image-to-image Translation</h2>
+                <p>
+                    You might be wondering, "How come section A.1.7 is so long?" Boy do I wish I had an answer to that. You've made it to the last part of this section! All our previous images we generated using the prompt "a high quality image", now let's try it with new prompts
+                </p>
+                <h3>End of the world as we know it</h3>
+                <div class="gallery">
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.3-0-1.png">
+                        <div class="caption">i_start = 1</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.3-0-3.png">
+                        <div class="caption">i_start = 3</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.3-0-5.png">
+                        <div class="caption">i_start = 5</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.3-0-7.png">
+                        <div class="caption">i_start = 7</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.3-0-10.png">
+                        <div class="caption">i_start = 10</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.3-0-20.png">
+                        <div class="caption">i_start = 20</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/campanile.png">
+                        <div class="caption">original</div>
+                    </div>
+                </div>
+
+                <h3>Clockwork machination</h3>
+                <div class="gallery">
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.3-1-1.png">
+                        <div class="caption">i_start = 1</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.3-1-3.png">
+                        <div class="caption">i_start = 3</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.3-1-5.png">
+                        <div class="caption">i_start = 5</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.3-1-7.png">
+                        <div class="caption">i_start = 7</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.3-1-10.png">
+                        <div class="caption">i_start = 10</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.3-1-20.png">
+                        <div class="caption">i_start = 20</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.3-1-orig.png">
+                        <div class="caption">original</div>
+                    </div>
+                </div>
+
+                <h3>Sand planet hatsune miku</h3>
+                <div class="gallery">
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.3-2-1.png">
+                        <div class="caption">i_start = 1</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.3-2-3.png">
+                        <div class="caption">i_start = 3</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.3-2-5.png">
+                        <div class="caption">i_start = 5</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.3-2-7.png">
+                        <div class="caption">i_start = 7</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.3-2-10.png">
+                        <div class="caption">i_start = 10</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.3-2-20.png">
+                        <div class="caption">i_start = 20</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.7.3-2-orig.png">
+                        <div class="caption">original</div>
+                    </div>
+                </div>
+                <h2>A.1.8: visual anagrams</h2>
+                <p>
+                    In this part, we implement Visual Anagrams and create optical illusions with diffusion models. In this part, we will create an image that looks like a certain prompt, but when flipped upside down will reveal a different prompt.
+                    To do this, we will denoise an image \(x_t\) at step \(t\)  normally with the prompt \(p_1\), to obtain noise estimate \(\epsilon_1\). But at the same time, we will flip \(x_t\) upside down, and denoise with the prompt \(p_2\), to get noise estimate \(\epsilon_2\). We can flip 
+                    back, and average the two noise estimates. We then denoise with the average noise estimate. 
+                    The full algorithm is described as:
+                    \[\epsilon_1 = \text{CFG of UNet}(x_t, t, p_1)\]
+                    \[\epsilon_2 = \text{flip}(\text{CFG of UNet}(\text{flip}(x_t), t, p_2))\]
+                    \[\epsilon = (\epsilon_1 + \epsilon_2) / 2\]
+                    Here are the results:
+                </p>
+                <div class="gallery">
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.8-1-1.png">
+                        <div class="caption">A sketch of a skull</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.8-1-2.png">
+                        <div class="caption">A sketch of a biblically accurate angel</div>
+                    </div>
+                </div>
+                <div class="gallery">
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.8-2-1.png">
+                        <div class="caption">An oil painting of a blue rose</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.8-2-2.png">
+                        <div class="caption">An oil painting of an electric guitar</div>
+                    </div>
+                </div>
+            </div>
+            <h2>A.1.9</h2>
+            <p>
+                In this part, we will make hybrid images. We also do this by using a composite noise estimator by estimating the noise of two different promots. The composite noise is found through the following algorithm:
+                \[\epsilon_1 = \text{CFG of UNet}(x_t, t, p_1)\]
+                \[\epsilon_2 = \text{CFG of UNet}(x_t, t, p_2)\]
+                \[\epsilon = f_\text{lowpass}(\epsilon_1) + f_\text{highpass}(\epsilon_2)\]
+                We found a gaussian with a size of 15 and a sigma of 1.8 worked well.
+            </p>
+                <div class="gallery">
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.9-1.png">
+                        <div class="caption">Hybrid image of a cat and flowers</div>
+                    </div>
+                    <div class="gallery-img" style="width:15vw;">
+                        <img src="./media/1.9-2.png">
+                        <div class="caption">Hybrid image of a polar bear and nixie tubes</div>
+                    </div>
+                </div>
+            
+            <div class="proj-part">
+                <h2>Part B: Flow Matching from Scratch</h2>
+                <h2>B.1.1: Implementing a UNet</h2>
+                <p>
+                    We start by building a one-step denoiser using a UNet. This network takes in a noisy image and spits out a denoised one. We followed the following architecture:
+                    <div class="gallery">
+                        <img src="./media/unconditional_arch.png" style="max-width: 80vw;">
+</div><div class="gallery">                        
+                        <img src="./media/operations.png" style="max-width: 80vw;">
+                    </div> 
+                </p>
+                <h2>B1.2.0: Using the UNet to Train a Denoiser</h2>
+                <p>
+                    We will now UNet to Train a Denoiser. To do this, we train on pairs of data, the noisy image and the clean image. To generate noisy images we used the following
+                    \[z = x + \sigma \epsilon,\quad \text{where }\epsilon \sim N(0, I).\]
+                    Where z is the noisy image, x is the original and sigma is the amount of noise to be added. For our data, we are using MNIST digits. 
+                    Here is the noising process for \(\sigma = [0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0]\)
+                </p>
+
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2-sigma0.0.png">
+                        <div class="caption">sigma = 0.0</div>
+                    </div>
+                     <div class="gallery-img" >
+                        <img src="./media/B/1.2-sigma0.2.png">
+                        <div class="caption">sigma = 0.2</div>
+                    </div>
+                     <div class="gallery-img" >
+                        <img src="./media/B/1.2-sigma0.4.png">
+                        <div class="caption">sigma = 0.4</div>
+                    </div>
+                     <div class="gallery-img" >
+                        <img src="./media/B/1.2-sigma0.5.png">
+                        <div class="caption">sigma = 0.5</div>
+                    </div>
+                     <div class="gallery-img" >
+                        <img src="./media/B/1.2-sigma0.6.png">
+                        <div class="caption">sigma = 0.6</div>
+                    </div>
+                     <div class="gallery-img" >
+                        <img src="./media/B/1.2-sigma0.8.png">
+                        <div class="caption">sigma = 0.8</div>
+                    </div>
+                     <div class="gallery-img" >
+                        <img src="./media/B/1.2-sigma1.0.png">
+                        <div class="caption">sigma = 1.0</div>
+                    </div>
+                </div> 
+                <h2>
+                    B.1.2.1: Training
+                </h2>
+                <p>
+                    Here we train a denoiser to denoise noisy image with \(\sigma = 0.5\) applied to a clean image.
+                    Using the MNIST dataset, we create a dataloader using torch. Using a batch size of 256, 5 epochs, hidden dimension 128, MSE as the loss function and the Adam optimizer with a learning rate of <code>1e-4</code>, we trained the model.
+
+                </p>
+
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.1-lossplot.jpg">
+                        <div class="caption">Training loss</div>
+                    </div>
+                </div>  
+                <h3>After 1 Epoch</h3>
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.1-e1-original0.png" style="width: 10vw;">
+                        <div class="caption">Input</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.1-e1-noise0.png" style="width: 10vw;">
+                        <div class="caption">Noisy \(\sigma=0.5\)</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.1-e1-pred0.png" style="width: 10vw;">
+                        <div class="caption">Output</div>
+                    </div>
+                </div>  
+
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.1-e1-original1.png" style="width: 10vw;">
+                        <div class="caption">Input</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.1-e1-noise1.png" style="width: 10vw;">
+                        <div class="caption">Noisy \(\sigma=0.5\)</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.1-e1-pred1.png" style="width: 10vw;">
+                        <div class="caption">Output</div>
+                    </div>
+                </div>  
+
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.1-e1-original2.png" style="width: 10vw;">
+                        <div class="caption">Input</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.1-e1-noise2.png" style="width: 10vw;">
+                        <div class="caption">Noisy \(\sigma=0.5\)</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.1-e1-pred2.png" style="width: 10vw;">
+                        <div class="caption">Output</div>
+                    </div>
+                </div>  
+                <h3>After 5 Epochs</h3>
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.1-e5-original0.png" style="width: 10vw;">
+                        <div class="caption">Input</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.1-e5-noise0.png" style="width: 10vw;">
+                        <div class="caption">Noisy \(\sigma=0.5\)</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.1-e5-pred0.png" style="width: 10vw;">
+                        <div class="caption">Output</div>
+                    </div>
+                </div>  
+
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.1-e5-original1.png" style="width: 10vw;">
+                        <div class="caption">Input</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.1-e5-noise1.png" style="width: 10vw;">
+                        <div class="caption">Noisy \(\sigma=0.5\)</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.1-e5-pred1.png" style="width: 10vw;">
+                        <div class="caption">Output</div>
+                    </div>
+                </div>  
+
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.1-e1-original2.png" style="width: 10vw;">
+                        <div class="caption">Input</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.1-e1-noise2.png" style="width: 10vw;">
+                        <div class="caption">Noisy \(\sigma=0.5\)</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.1-e1-pred2.png" style="width: 10vw;">
+                        <div class="caption">Output</div>
+                    </div>
+                </div>  
+                
+                <h2>B.1.2.2: </h2>
+                <p>Our denoiser was trained on MNIST digits noised with \(\sigma=5\). Let's see how it performs on different \(\sigma\)'s that it wasn't trained for.</p>
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.2-image.png" style="width: 10vw;">
+                        <div class="caption">Input</div>
+                    </div>
+                </div>
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.2-noise-0.0.png" style="width: 10vw;">
+                        <div class="caption">Noisy \(\sigma=0.0\)</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.2-noise-0.2.png" style="width: 10vw;">
+                        <div class="caption">Noisy \(\sigma=0.2\)</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.2-noise-0.4.png" style="width: 10vw;">
+                        <div class="caption">Noisy \(\sigma=0.4\)</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.2-noise-0.5.png" style="width: 10vw;">
+                        <div class="caption">Noisy \(\sigma=0.5\)</div>
+                    </div>
+
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.2-pred-0.0.png" style="width: 10vw;">
+                        <div class="caption">Output</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.2-pred-0.2.png" style="width: 10vw;">
+                        <div class="caption">Output</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.2-pred-0.4.png" style="width: 10vw;">
+                        <div class="caption">Output</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.2-pred-0.5.png" style="width: 10vw;">
+                        <div class="caption">Output</div>
+                    </div>
+                </div> 
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.2-noise-0.6.png" style="width: 10vw;">
+                        <div class="caption">Noisy \(\sigma=0.6\)</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.2-noise-0.8.png" style="width: 10vw;">
+                        <div class="caption">Noisy \(\sigma=0.8\)</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.2-noise-1.0.png" style="width: 10vw;">
+                        <div class="caption">Noisy \(\sigma=1.0\)</div>
+                    </div>
+                    </div> 
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.2-pred-0.6.png" style="width: 10vw;">
+                        <div class="caption">Output</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.2-pred-0.8.png" style="width: 10vw;">
+                        <div class="caption">Output</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.2-pred-1.0.png" style="width: 10vw;">
+                        <div class="caption">Output</div>
+                    </div>
+                </div> 
+                <h2>B.1.2.3: Denoising Pure Noise</h2>
+                <p>
+                    Let's make it generative! In this section, we trained the previous model on pure noise and tried to map it back to the MNIST digits. Using the same loss, same number of epochs and other parameters we get a blob that looks digit-like. Because the noise is independent of the digits, we get some approximation of the average shape. Must be why alarm clocks have lights that form an 8 when they are all on.
+                </p>
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.3-lossplot.jpg">
+                        <div class="caption">Loss</div>
+                    </div>
+                </div>
+                <h3>after 1 epoch</h3>
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.3-e1-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.3-e1-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.3-e1-2.png" style="width: 10vw;">
+                    </div>
+                </div> 
+                <h3>After 5 epochs</h3>
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.3-e5-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.3-e5-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/1.2.3-e5-2.png" style="width: 10vw;">
+                    </div>
+                </div> 
+            </div>
+            <div class="proj-part">
+                <h2>Part B.2: Training a flow matching model</h2>
+
+
+                <h2>B.2.2</h2>
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.2-loss.png" >
+                    </div>
+                </div> 
+
+                <h2>B.2.3</h2>
+                <h3>after 1 epoch</h3>
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.2-e1-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.2-e1-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.2-e1-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.2-e1-3.png" style="width: 10vw;">
+                    </div>
+                </div> 
+
+                <h3>after 5 epoch</h3>
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.2-e5-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.2-e5-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.2-e5-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.2-e5-3.png" style="width: 10vw;">
+                    </div>
+                </div> 
+                <h3>after 10 epoch</h3>
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.2-e10-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.2-e10-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.2-e10-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.2-e10-3.png" style="width: 10vw;">
+                    </div>
+                </div> 
+
+
+                <h2>B.2.5</h2>
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-loss.png" >
+                    </div>
+                </div> 
+
+                <h2>B.2.6</h2>
+                <h3>after 1 epoch</h3>
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-0-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-0-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-0-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-0-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-1-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-1-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-1-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-1-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-2-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-2-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-2-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-2-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-3-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-3-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-3-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-3-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-4-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-4-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-4-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-4-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-5-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-5-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-5-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-5-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-6-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-6-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-6-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-6-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-7-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-7-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-7-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-7-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-8-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-8-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-8-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-8-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-9-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-9-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-9-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e1-9-3.png" style="width: 10vw;">
+                    </div>
+                </div> 
+
+                <h3>after 5 epoch</h3>
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-0-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-0-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-0-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-0-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-1-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-1-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-1-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-1-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-2-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-2-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-2-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-2-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-3-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-3-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-3-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-3-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-4-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-4-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-4-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-4-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-5-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-5-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-5-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-5-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-6-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-6-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-6-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-6-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-7-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-7-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-7-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-7-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-8-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-8-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-8-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-8-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-9-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-9-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-9-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e5-9-3.png" style="width: 10vw;">
+                    </div>
+                </div> 
+
+                <h3>after 10 epoch</h3>
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-0-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-0-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-0-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-0-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-1-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-1-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-1-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-1-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-2-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-2-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-2-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-2-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-3-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-3-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-3-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-3-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-4-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-4-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-4-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-4-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-5-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-5-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-5-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-5-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-6-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-6-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-6-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-6-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-7-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-7-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-7-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-7-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-8-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-8-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-8-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-8-3.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-9-0.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-9-1.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-9-2.png" style="width: 10vw;">
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-e10-9-3.png" style="width: 10vw;">
+                    </div>
+                </div> 
+                <h2>Remove Learning Rate Scheduler</h2>
+                <p>
+                    The model does not perform as well without the sceduler, so what we had to do was decrease the learning rate of the model, so it is able to learn things more precisely. 
+                </p>
+                <div class="gallery">
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-nosched-loss.png" style="width: 10vw;">
+                        
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-nosched-e1-7-3.png" style="width: 10vw;">
+                        <div class="caption">epoch1</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-nosched-e5-7-3.png" style="width: 10vw;">
+                        <div class="caption">epoch5</div>
+                    </div>
+                    <div class="gallery-img" >
+                        <img src="./media/B/2.5-nosched-e10-7-3.png" style="width: 10vw;">
+                        <div class="caption">epoch10</div>
+                    </div>
+                </div> 
+
+            </div>
+              
+        </div>   
+    </div>
+</body>
+</html>
